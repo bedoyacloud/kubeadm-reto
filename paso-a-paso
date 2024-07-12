@@ -4,24 +4,29 @@ apt upgrade -y
 
 SETEANDO NETWORKING
 
+# Cargar módulos necesarios para Kubernetes y Containerd
 cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
 overlay
 br_netfilter
 EOF
 
+# Cargar los módulos inmediatamente
 sudo modprobe overlay
 sudo modprobe br_netfilter
 
+# Configurar parámetros de sysctl necesarios para Kubernetes
 cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables = 1
+net.bridge.bridge-nf-call-ip6tables = 1
 net.ipv4.ip_forward = 1
 EOF
 
-sudo tee /etc/modules-load.d/containerd.conf << EOF
-overlay
-br_netfilter
-EOF
-
+# Aplicar las configuraciones de sysctl
 sudo sysctl --system
+
+# Verificar que los módulos están cargados
+lsmod | grep -e overlay -e br_netfilter
+
 
 INSTALANDO CONTAINERD.IO
 
@@ -35,6 +40,7 @@ $(lsb_release -cs) \
 stable"
 
 sudo apt update
+sudo apt upgrade
 sudo apt install -y containerd.io
 
 sudo mkdir -p /etc/containerd
@@ -65,10 +71,11 @@ sudo apt update && sudo apt install -y kubelet kubeadm kubectl && sudo apt-mark 
 
 #kubeadm init --kubernetes-version=1.30.0 --pod-network-cidr=10.8.0.0/16
 
-kubeadm init --kubernetes-version=1.30.0
+sudo kubeadm init --apiserver-advertise-address=172.31.30.22
 
-kubeadm join 138.197.102.111:6443 --token x1ear6.2trpm10g55oozuta \
-        --discovery-token-ca-cert-hash sha256:96cfed38dc7b975f14beae9cea358240dbf80096b74c55997587adea6207848b
+
+kubeadm join 172.31.30.22:6443 --token 8u3r2s.tvqhuoggeh7ww0mj \
+        --discovery-token-ca-cert-hash sha256:de830712ec9ee032983f75c2b2bf1980b202c53e83318a6135acb1563bb6d799
 
 
 Tomo documentacion de calico para ambientes dev - open source (https://docs.tigera.io/calico/latest/getting-started/kubernetes/quickstart)
